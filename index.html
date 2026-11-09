@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#101710">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Последнее убежище">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<title>ZOMBIE: LAST SHELTER</title>
+<style>
+:root{--ink:#e6e1cf;--muted:#a9ad91;--panel:rgba(18,25,19,.82);--line:rgba(171,157,116,.35);--gold:#c6a66c;--danger:#c65d50}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#101710;color:var(--ink);font:12px/1.3 "Courier New",monospace;touch-action:none}
+#app{position:fixed;inset:0;display:block;padding:0}
+header{position:absolute;z-index:5;top:7px;left:7px;right:7px;display:flex;align-items:center;gap:8px;padding:4px 7px;background:rgba(13,20,15,.62);border:1px solid rgba(170,160,124,.18);border-radius:3px;min-height:28px;pointer-events:auto}
+h1{font-size:10px;letter-spacing:1px;margin:0;color:#d4bd8b;white-space:nowrap}.stats{display:flex;gap:8px;flex:1;flex-wrap:nowrap;overflow:hidden;color:#d8d4bf;font-size:11px}.stat{white-space:nowrap}.stat b{font-weight:600;color:#fff0c9}
+button{font:inherit;background:rgba(28,39,29,.78);color:var(--ink);border:1px solid var(--line);border-radius:2px;padding:5px 7px;cursor:pointer}
+button:hover,button.active{background:rgba(119,99,59,.72);border-color:#a78b5d}button:disabled{opacity:.4}
+#pause,.speed{padding:3px 6px;font-size:10px;min-width:25px}
+main{position:absolute;inset:0;display:block}
+#worldWrap{position:absolute;inset:0;min-width:0;min-height:0;background:#18231c;overflow:hidden}
+canvas{width:100%;height:100%;display:block;image-rendering:pixelated}
+#hint{position:absolute;left:8px;top:42px;background:rgba(12,19,14,.55);border:1px solid rgba(170,160,124,.18);padding:4px 6px;border-radius:2px;color:#c7c8ae;font-size:10px;pointer-events:none;opacity:.8}
+#toast{position:absolute;top:43px;left:50%;transform:translateX(-50%);background:rgba(20,29,21,.82);border:1px solid rgba(198,166,108,.45);padding:5px 9px;border-radius:2px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:85%;text-align:center;font-size:11px}
+#toast.show{opacity:1}
+aside{position:absolute;z-index:10;right:8px;top:44px;width:min(245px,82vw);max-height:70vh;overflow:auto;display:none;gap:5px;background:rgba(13,20,15,.91);border:1px solid var(--line);padding:7px}
+aside.open{display:flex;flex-direction:column}
+.panel{padding:6px;background:transparent;border:0;border-bottom:1px solid rgba(170,160,124,.17);border-radius:0}
+.panel h2{font-size:10px;margin:0 0 6px;color:#d0b77e;text-transform:uppercase;letter-spacing:.7px}
+.tools{display:flex;flex-wrap:wrap;gap:4px}.tools button{font-size:10px;padding:5px 6px}
+.small{font-size:9px;color:var(--muted)}#log{max-height:92px;overflow:auto;font-size:10px;color:#c6d1c4}#log div{padding:2px 0;border-bottom:1px solid rgba(100,120,90,.18)}
+#selected{font-size:10px;color:#d0dbce;min-height:22px}
+footer{display:none}
+#menuToggle{margin-left:auto;font-size:13px;padding:2px 7px;line-height:18px}
+#resourceToggle{font-size:11px;padding:2px 6px}
+#resourceBar.collapsed .stats{display:none}
+#quickbar{position:absolute;z-index:7;left:50%;bottom:9px;transform:translateX(-50%);display:none;gap:4px;padding:4px;background:rgba(13,20,15,.7);border:1px solid rgba(170,160,124,.22)}
+#quickbar.show{display:flex}#quickbar button{font-size:15px;min-width:31px;padding:5px}
+#touchStick{position:absolute;z-index:8;left:15px;bottom:18px;width:94px;height:94px;display:none;pointer-events:auto}
+#stickBase{position:absolute;inset:17px;border-radius:50%;background:rgba(18,27,19,.18);border:1px solid rgba(210,205,170,.13)}
+#stickNub{position:absolute;width:28px;height:28px;left:33px;top:33px;border-radius:50%;background:rgba(200,190,151,.24);border:1px solid rgba(220,210,175,.25)}
+#actions{position:absolute;z-index:8;right:13px;bottom:19px;display:none;gap:6px;align-items:flex-end}
+#actions button{width:37px;height:37px;padding:0;font-size:17px;border-radius:50%;background:rgba(18,27,19,.48);border-color:rgba(210,205,170,.25)}
+#contextPanel{position:absolute;z-index:9;left:50%;bottom:54px;transform:translateX(-50%);display:none;background:rgba(13,20,15,.86);border:1px solid var(--line);padding:6px;max-width:85vw}
+#contextPanel.show{display:flex;gap:4px}#contextPanel button{font-size:10px}
+@media(pointer:coarse){#touchStick,#actions{display:block}#hint{display:none}#quickbar{bottom:7px}header{top:4px;left:4px;right:4px}.stats{gap:6px;font-size:10px}}
+@media(max-width:520px){h1{display:none}.stats{gap:6px}.stat{font-size:10px}#pause{display:none}#touchStick{left:5px;bottom:10px}#actions{right:6px;bottom:12px}}
+</style>
+</head>
+<body>
+<div id="app">
+<header id="resourceBar">
+  <button id="resourceToggle" title="Ресурсы">☷</button>
+  <h1>☣ ПОСЛЕДНЕЕ УБЕЖИЩЕ</h1>
+  <div class="stats" id="stats"></div>
+  <button id="pause" title="Пауза">Ⅱ</button>
+  <button data-speed="1" class="speed active">1×</button><button data-speed="2" class="speed">2×</button><button data-speed="3" class="speed">3×</button>
+  <button id="menuToggle" title="Меню">☰</button>
+</header>
+<main>
+ <div id="worldWrap"><canvas id="game"></canvas>
+  <div id="hint">WASD — движение · E — собрать · Пробел — удар · Колесо — масштаб · ПКМ — обзор</div>
+  <div id="toast"></div>
+  <div id="touchStick"><div id="stickBase"></div><div id="stickNub"></div></div>
+  <div id="actions"><button id="collectAction" title="Собрать" style="display:none">✚</button><button id="attackAction" title="Атаковать" style="display:none">⚔</button></div>
+  <div id="quickbar"></div>
+  <div id="contextPanel"></div>
+ </div>
+ <aside id="menuPanel">
+  <section class="panel"><h2>Строительство</h2><div class="tools" id="buildTools">
+   <button data-build="wall">▤ Стена</button><button data-build="gate">▥ Ворота</button><button data-build="shelter">⌂ Укрытие</button><button data-build="tower">♜ Башня</button><button data-build="road">▧ Дорога</button><button data-build="farm">♧ Грядка</button>
+  </div><p class="small">Выберите постройку, затем свободную клетку. Esc — отмена.</p></section>
+  <section class="panel"><h2>Объект</h2><div id="selected">Выберите объект на карте.</div><div class="tools"><button id="repair">⚒ Ремонт · 3 дерева</button><button id="demolish">⌫ Снести</button></div></section>
+  <section class="panel"><h2>Выжившие</h2><div id="people">4 человека</div></section>
+  <section class="panel"><h2>Журнал</h2><div id="log"></div></section>
+  <section class="panel"><h2>Сохранение</h2><div class="tools"><button id="save">Сохранить</button><button id="load">Загрузить</button><button id="new">Новая игра</button></div></section>
+ </aside>
+</main>
+</div>
+<script>
+(()=>{
+'use strict';
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d'),wrap=document.getElementById('worldWrap');
+const TS=32,W=64,H=48;
+const costs={wall:{wood:5},gate:{wood:8},shelter:{wood:18},tower:{wood:15,metal:5},road:{wood:1},farm:{wood:8,stone:3}};
+const labels={wall:'Деревянная стена',gate:'Ворота',shelter:'Укрытие',tower:'Часовая башня',road:'Грунтовая дорога',farm:'Грядка',tree:'Дерево',rock:'Камни',zombie:'Зомби'};
+let state,keys={},camera={x:0,y:0,zoom:1},selectedBuild=null,selected=null,paused=false,speed=1,last=0,toastTimer=0,drag=null,gameOver=false;
+const rand=(a,b)=>Math.random()*(b-a)+a,ri=(a,b)=>Math.floor(rand(a,b)),clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+function fresh(){
+ let tiles=Array.from({length:H},(_,y)=>Array.from({length:W},(_,x)=>({type:((x*13+y*7)%17===0?'dirt':'grass')})));
+ let objects=[],id=1;
+ const add=(type,x,y,extra={})=>objects.push({id:id++,type,x,y,hp:extra.hp??(type==='wall'?70:type==='gate'?90:type==='zombie'?30:100),max:extra.max??(type==='wall'?70:type==='gate'?90:type==='zombie'?30:100),...extra});
+ // Protected starter compound and facilities
+ for(let x=16;x<=27;x++){if(x!==21&&x!==22)add('wall',x,15);add('wall',x,25)}
+ for(let y=16;y<25;y++){add('wall',16,y);add('wall',27,y)}
+ add('gate',21,25,{hp:90,max:90});add('shelter',19,18);add('warehouse',23,18);
+ for(let i=0;i<105;i++){let x=ri(2,W-2),y=ri(2,H-2);if(Math.abs(x-22)<9&&Math.abs(y-20)<9)continue;add(Math.random()<.72?'tree':'rock',x,y,{hp:1,max:1})}
+ let p={x:21.5,y:21.5,hp:100,max:100,stamina:100};
+ let survivors=[{name:'Алексей',role:'Лидер',hp:100},{name:'Мария',role:'Медик',hp:100},{name:'Иван',role:'Строитель',hp:100},{name:'Ольга',role:'Разведчик',hp:100}];
+ return {day:1,time:8,wood:35,stone:12,metal:8,food:35,water:40,ammo:12,pop:4,morale:78,tiles,objects,player:p,survivors,zombies:[],nextRaid:100,elapsed:0,gameOver:false,id};
+}
+function notify(s){let t=document.getElementById('toast');t.textContent=s;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2300);log(s)}
+function log(s){let e=document.createElement('div');e.textContent=`День ${state.day}: ${s}`;let l=document.getElementById('log');l.prepend(e);while(l.children.length>35)l.lastChild.remove()}
+function resize(){let r=wrap.getBoundingClientRect(),d=devicePixelRatio||1;canvas.width=Math.floor(r.width*d);canvas.height=Math.floor(r.height*d);ctx.setTransform(d,0,0,d,0,0)}
+new ResizeObserver(resize).observe(wrap);resize();
+function solidAt(x,y){return state.objects.some(o=>Math.floor(o.x)===x&&Math.floor(o.y)===y&&['wall','gate','shelter','warehouse','tower','farm'].includes(o.type)&&o.hp>0)}
+function objAt(x,y){return state.objects.find(o=>Math.floor(o.x)===x&&Math.floor(o.y)===y)}
+function worldPos(sx,sy){return {x:(sx-camera.x)/ (TS*camera.zoom),y:(sy-camera.y)/(TS*camera.zoom)}}
+function screenPos(x,y){return {x:camera.x+x*TS*camera.zoom,y:camera.y+y*TS*camera.zoom}}
+function updateHUD(){
+ const s=state;document.getElementById('stats').innerHTML=`<span class="stat">День <b>${s.day}</b> · ${String(Math.floor(s.time)).padStart(2,'0')}:${String(Math.floor((s.time%1)*60)).padStart(2,'0')}</span><span class="stat">👥 <b>${s.pop}</b></span><span class="stat">🌲 <b>${Math.floor(s.wood)}</b></span><span class="stat">🪨 <b>${Math.floor(s.stone)}</b></span><span class="stat">🔩 <b>${Math.floor(s.metal)}</b></span><span class="stat">🥫 <b>${Math.floor(s.food)}</b></span><span class="stat">💧 <b>${Math.floor(s.water)}</b></span><span class="stat">🔫 <b>${Math.floor(s.ammo)}</b></span><span class="stat">🙂 <b>${Math.floor(s.morale)}%</b></span>`;
+ document.getElementById('people').textContent=s.survivors.map(v=>`${v.name} — ${v.role}`).join(' · ');
+}
+function draw(){
+ let cw=wrap.clientWidth,ch=wrap.clientHeight;ctx.clearRect(0,0,cw,ch);ctx.fillStyle='#17241b';ctx.fillRect(0,0,cw,ch);
+ let z=TS*camera.zoom,x0=Math.max(0,Math.floor(-camera.x/z)),y0=Math.max(0,Math.floor(-camera.y/z)),x1=Math.min(W,Math.ceil((cw-camera.x)/z)),y1=Math.min(H,Math.ceil((ch-camera.y)/z));
+ for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++){let p=screenPos(x,y);ctx.fillStyle=state.tiles[y][x].type==='dirt'?'#655744':((x+y)%3===0?'#416344':'#466b46');ctx.fillRect(p.x,p.y,z+1,z+1);if((x*7+y*3)%11===0){ctx.fillStyle='#52764d';ctx.fillRect(p.x+z*.3,p.y+z*.3,2*camera.zoom,2*camera.zoom)}}
+ for(let o of state.objects){if(o.type==='tree'||o.type==='rock'||o.type==='zombie'||o.type==='dead'){}let p=screenPos(o.x,o.y),s=z;if(p.x<-s||p.y<-s||p.x>cw||p.y>ch)continue;
+ ctx.save();ctx.translate(p.x,p.y);
+ if(o.type==='tree'){ctx.fillStyle='#65452c';ctx.fillRect(s*.42,s*.45,s*.17,s*.42);ctx.fillStyle='#244c31';ctx.fillRect(s*.12,s*.08,s*.75,s*.58);ctx.fillStyle='#35613a';ctx.fillRect(s*.28,s*.02,s*.42,s*.48)}
+ else if(o.type==='rock'){ctx.fillStyle='#85877c';ctx.fillRect(s*.2,s*.3,s*.6,s*.48);ctx.fillStyle='#a3a69a';ctx.fillRect(s*.32,s*.25,s*.3,s*.2)}
+ else if(o.type==='wall'||o.type==='gate'){ctx.fillStyle=o.type==='gate'?'#9b7548':'#765137';ctx.fillRect(1,2,s-2,s-4);ctx.fillStyle='#b08a58';for(let i=4;i<s;i+=8)ctx.fillRect(i,3,2,s-6)}
+ else if(o.type==='shelter'||o.type==='warehouse'){ctx.fillStyle=o.type==='shelter'?'#88704d':'#6b7470';ctx.fillRect(s*.1,s*.18,s*.8,s*.68);ctx.fillStyle='#4b3b2b';ctx.fillRect(s*.38,s*.48,s*.24,s*.38);ctx.fillStyle='#b1a17d';ctx.fillRect(s*.17,s*.25,s*.66,s*.08)}
+ else if(o.type==='tower'){ctx.fillStyle='#8c7958';ctx.fillRect(s*.18,s*.18,s*.64,s*.64);ctx.fillStyle='#d3b67b';ctx.fillRect(s*.34,s*.08,s*.32,s*.32)}
+ else if(o.type==='road'){ctx.fillStyle='#87775e';ctx.fillRect(0,0,s,s)}
+ else if(o.type==='farm'){ctx.fillStyle='#654d32';ctx.fillRect(s*.08,s*.12,s*.84,s*.76);ctx.strokeStyle='#a18b55';ctx.lineWidth=2;for(let k=0;k<3;k++){ctx.beginPath();ctx.moveTo(s*.18,s*(.3+k*.2));ctx.lineTo(s*.82,s*(.3+k*.2));ctx.stroke()}}
+ else if(o.type==='zombie'){ctx.fillStyle=o.kind==='runner'?'#b5a65d':'#78965b';ctx.fillRect(s*.25,s*.2,s*.5,s*.6);ctx.fillStyle='#262a22';ctx.fillRect(s*.34,s*.32,s*.08,s*.08);ctx.fillRect(s*.58,s*.32,s*.08,s*.08)}
+ if(o.hp<o.max&&o.max>1){ctx.fillStyle='#321f1d';ctx.fillRect(1,-4,s-2,3);ctx.fillStyle='#c45b4d';ctx.fillRect(1,-4,(s-2)*o.hp/o.max,3)}
+ if(selected===o.id){ctx.strokeStyle='#f2d28b';ctx.lineWidth=2;ctx.strokeRect(1,1,s-2,s-2)}
+ ctx.restore();}
+ // Player
+ let pp=screenPos(state.player.x,state.player.y);ctx.fillStyle='#e2c18b';ctx.fillRect(pp.x+z*.28,pp.y+z*.18,z*.44,z*.62);ctx.fillStyle='#3e5260';ctx.fillRect(pp.x+z*.25,pp.y+z*.48,z*.5,z*.32);
+ // darkness
+ let night=state.time>=19||state.time<6;if(night){ctx.fillStyle='rgba(5,10,22,.56)';ctx.fillRect(0,0,cw,ch);let g=ctx.createRadialGradient(pp.x+z/2,pp.y+z/2,z*.4,pp.x+z/2,pp.y+z/2,z*5);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,.7)');ctx.fillStyle=g;ctx.fillRect(0,0,cw,ch)}
+ if(selectedBuild){let m=mouse,wp=worldPos(m.x,m.y),p=screenPos(Math.floor(wp.x),Math.floor(wp.y));ctx.globalAlpha=.6;ctx.fillStyle=canPlace(Math.floor(wp.x),Math.floor(wp.y),selectedBuild)?'#9bd18b':'#e05b50';ctx.fillRect(p.x,p.y,z,z);ctx.globalAlpha=1}
+}
+let mouse={x:0,y:0};
+function canPlace(x,y,type){if(x<1||y<1||x>=W-1||y>=H-1||objAt(x,y))return false;if(type!=='road'&&Math.hypot(x-state.player.x,y-state.player.y)<1)return false;return true}
+function place(x,y,type){let c=costs[type];if(!canPlace(x,y,type)){notify('Здесь нельзя строить.');return}for(let k in c)if(state[k]<c[k]){notify('Недостаточно ресурсов!');return}for(let k in c)state[k]-=c[k];let hp=type==='wall'?70:type==='gate'?90:100;state.objects.push({id:state.id++,type,x,y,hp:Math.min(10,hp),max:hp,build:0});notify('Начато строительство: '+labels[type]+'.');selectedBuild=null;document.querySelectorAll('[data-build]').forEach(b=>b.classList.remove('active'))}
+function collect(){let p=state.player;let o=state.objects.filter(o=>['tree','rock'].includes(o.type)&&Math.hypot(o.x-p.x,o.y-p.y)<1.8).sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0];if(!o){notify('Рядом нет ресурсов.');return}if(o.type==='tree'){state.wood+=5;notify('Собрано: +5 дерева.')}else{state.stone+=3;notify('Собрано: +3 камня.')}state.objects=state.objects.filter(v=>v.id!==o.id)}
+function attack(){let p=state.player;if(p.stamina<10){notify('Вы слишком устали.');return}let z=state.zombies.filter(v=>Math.hypot(v.x-p.x,v.y-p.y)<1.5).sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0];if(!z){notify('Вплотную нет противника.');return}z.hp-=24;p.stamina-=10;if(z.hp<=0){state.zombies=state.zombies.filter(v=>v!==z);notify('Зомби повержен.')}else notify('Удар нанесён!')}
+function spawnZombie(){let side=ri(0,4),x=side===0?1:side===1?W-2:ri(1,W-2),y=side===2?1:side===3?H-2:ri(1,H-2);state.zombies.push({id:state.id++,type:'zombie',kind:Math.random()<.2?'runner':'walker',x,y,hp:Math.random()<.2?24:35,max:35,attack:0})}
+function tick(dt){if(paused||gameOver)return;let s=state,p=s.player;let dx=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0),dy=(keys.s||keys.arrowdown?1:0)-(keys.w||keys.arrowup?1:0),len=Math.hypot(dx,dy)||1;let nx=p.x+dx/len*dt*3.3,ny=p.y+dy/len*dt*3.3;if(!solidAt(Math.floor(nx),Math.floor(p.y)))p.x=clamp(nx,1,W-2);if(!solidAt(Math.floor(p.x),Math.floor(ny)))p.y=clamp(ny,1,H-2);p.stamina=clamp(p.stamina+dt*4,0,100);
+ s.elapsed+=dt;s.time+=dt/75;if(s.time>=24){s.time-=24;s.day++;s.food-=s.pop*1.2;s.water-=s.pop*1.5;log('Наступил новый день. Запасы уменьшились.');if(s.food<0||s.water<0){s.morale-=8;notify('Критическая нехватка еды или воды!')}else s.morale=clamp(s.morale+1,0,100)}
+ // Construction slowly completes, basic farms produce food.
+ for(let o of s.objects){if(o.build!==undefined&&o.hp<o.max){o.build+=dt;if(o.build>8)o.hp=Math.min(o.max,o.hp+dt*12)}if(o.type==='farm'&&s.time%1<dt/75)s.food+=.12}
+ if(s.elapsed>s.nextRaid){s.nextRaid+=rand(85,125);let n=ri(3,6)+Math.floor(s.day/2);for(let i=0;i<n;i++)spawnZombie();notify('ВНИМАНИЕ! К поселению приближается группа зомби!')}
+ for(let z of s.zombies){let tx=p.x,ty=p.y,best=Math.hypot(tx-z.x,ty-z.y);let wall=s.objects.filter(o=>['wall','gate'].includes(o.type)&&o.hp>0).map(o=>({o,d:Math.hypot(o.x-z.x,o.y-z.y)})).sort((a,b)=>a.d-b.d)[0];if(wall&&wall.d<best+2){tx=wall.o.x;ty=wall.o.y;best=wall.d}
+ let vx=tx-z.x,vy=ty-z.y,d=Math.hypot(vx,vy)||1;if(d>.6){let step=(z.kind==='runner'?1.35:.62)*dt,nx=z.x+vx/d*step,ny=z.y+vy/d*step;if(!solidAt(Math.floor(nx),Math.floor(ny))){z.x=nx;z.y=ny}else{let block=objAt(Math.floor(nx),Math.floor(ny));if(block&&['wall','gate'].includes(block.type)){z.attack=(z.attack||0)+dt;if(z.attack>.8){block.hp-=z.kind==='runner'?8:5;z.attack=0;if(block.hp<=0){notify('ЗОМБИ ПРОРВАЛИ ОБОРОНУ!');s.objects=s.objects.filter(o=>o.hp>0)}}}}}else if(d<=.7){z.attack=(z.attack||0)+dt;if(z.attack>1){p.hp-=5;z.attack=0;notify('Зомби атакует вас!')}}}
+ if(p.hp<=0){gameOver=true;notify('ВЫ ПОГИБЛИ. Поселение осталось без лидера.')}
+ if(s.elapsed%10<dt){updateHUD();if(s.elapsed%60<dt)save(false)}
+}
+function frame(t){let dt=Math.min(.05,(t-last)/1000||0)*speed;last=t;tick(dt);draw();requestAnimationFrame(frame)}
+function save(show=true){try{localStorage.setItem('zombieLastShelterSave',JSON.stringify(state));if(show)notify('Игра сохранена.')}catch(e){notify('Не удалось сохранить игру.')}}
+function load(){let raw=localStorage.getItem('zombieLastShelterSave');if(!raw){notify('Сохранение не найдено.');return}try{state=JSON.parse(raw);gameOver=false;updateHUD();notify('Сохранение загружено.')}catch(e){notify('Файл сохранения повреждён.')}}
+function startNew(){if(!confirm('Начать новую игру? Текущий прогресс будет заменён.'))return;state=fresh();gameOver=false;document.getElementById('log').innerHTML='';updateHUD();notify('Добро пожаловать в убежище. Соберите дерево и укрепите стены.')}
+state=fresh();updateHUD();log('Вы прибыли в последнее убежище. Нужно подготовиться к ночи.');log('Подсказка: подойдите к дереву или камням и нажмите E.');
+document.addEventListener('keydown',e=>{let k=e.key.toLowerCase();keys[k]=true;if([' ','arrowup','arrowdown','arrowleft','arrowright'].includes(k))e.preventDefault();if(k==='e')collect();if(k===' ')attack();if(k==='escape'){selectedBuild=null;document.querySelectorAll('[data-build]').forEach(b=>b.classList.remove('active'))}});
+document.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+canvas.addEventListener('mousemove',e=>{let r=canvas.getBoundingClientRect();mouse={x:e.clientX-r.left,y:e.clientY-r.top};if(drag){camera.x+=e.clientX-drag.x;camera.y+=e.clientY-drag.y;drag={x:e.clientX,y:e.clientY}}});
+canvas.addEventListener('mousedown',e=>{if(e.button===2){drag={x:e.clientX,y:e.clientY};return}if(e.button===0){let wp=worldPos(mouse.x,mouse.y),x=Math.floor(wp.x),y=Math.floor(wp.y);if(selectedBuild){place(x,y,selectedBuild);return}let o=objAt(x,y);selected=o?o.id:null;let box=document.getElementById('selected');box.textContent=o?`${labels[o.type]||o.type} · прочность ${Math.max(0,Math.floor(o.hp))}/${o.max}${o.type==='zombie'?' · угроза':''}`:'Клетка свободна. Выбери постройку или осмотри объект.'}});
+canvas.addEventListener('mouseup',()=>drag=null);canvas.addEventListener('contextmenu',e=>e.preventDefault());
+canvas.addEventListener('wheel',e=>{e.preventDefault();let old=camera.zoom;camera.zoom=clamp(camera.zoom*(e.deltaY<0?1.12:.89),.55,2.2);let f=camera.zoom/old;camera.x=mouse.x-(mouse.x-camera.x)*f;camera.y=mouse.y-(mouse.y-camera.y)*f},{passive:false});
+document.querySelectorAll('[data-build]').forEach(b=>b.onclick=()=>{selectedBuild=b.dataset.build;document.querySelectorAll('[data-build]').forEach(v=>v.classList.toggle('active',v===b));notify('Выбрано: '+labels[selectedBuild]+'. Укажите клетку на карте.')});
+document.getElementById('pause').onclick=()=>{paused=!paused;document.getElementById('pause').textContent=paused?'Продолжить':'Пауза'};
+document.querySelectorAll('.speed').forEach(b=>b.onclick=()=>{speed=+b.dataset.speed;document.querySelectorAll('.speed').forEach(v=>v.classList.toggle('active',v===b))});
+document.getElementById('save').onclick=()=>save(true);document.getElementById('load').onclick=load;document.getElementById('new').onclick=startNew;
+document.getElementById('repair').onclick=()=>{let o=state.objects.find(o=>['wall','gate'].includes(o.type)&&o.hp<o.max&&Math.hypot(o.x-state.player.x,o.y-state.player.y)<3);if(!o){notify('Рядом нет повреждённых стен.');return}if(state.wood<3){notify('Недостаточно дерева!');return}state.wood-=3;o.hp=Math.min(o.max,o.hp+25);notify('Оборона отремонтирована.')};
+document.getElementById('demolish').onclick=()=>{let o=state.objects.find(o=>o.id===selected);if(!o||['tree','rock','zombie'].includes(o.type)){notify('Сносить нечего.');return}state.objects=state.objects.filter(v=>v.id!==selected);selected=null;notify('Объект разобран. Возврат ресурсов не предусмотрен.')};
+
+// Compact contextual UI and touch controls
+const menuPanel=document.getElementById('menuPanel');
+document.getElementById('menuToggle').onclick=()=>menuPanel.classList.toggle('open');
+document.getElementById('resourceToggle').onclick=()=>document.getElementById('resourceBar').classList.toggle('collapsed');
+const quickbar=document.getElementById('quickbar');
+function showBuildBar(){quickbar.innerHTML='';[['wall','▤'],['gate','▥'],['shelter','⌂'],['tower','♜'],['road','▧'],['farm','♧']].forEach(([type,icon])=>{let b=document.createElement('button');b.textContent=icon;b.title=labels[type];b.onclick=()=>{selectedBuild=type;quickbar.querySelectorAll('button').forEach(x=>x.classList.remove('active'));b.classList.add('active');notify('Выберите место для постройки.')};quickbar.appendChild(b)});quickbar.classList.add('show')}
+function hideBuildBar(){quickbar.classList.remove('show')}
+
+// Small contextual inspection strip for selected map objects
+canvas.addEventListener('click',()=>{
+ const panel=document.getElementById('contextPanel'),obj=state.objects.find(o=>o.id===selected);
+ if(!obj){panel.classList.remove('show');panel.innerHTML='';return}
+ panel.innerHTML='';
+ let info=document.createElement('span');
+ info.textContent=`${labels[obj.type]||obj.type} · ${Math.max(0,Math.floor(obj.hp))}/${obj.max}`;
+ info.style.cssText='align-self:center;font-size:10px;color:#e5d8b7;padding:0 4px';
+ panel.appendChild(info);
+ if(['wall','gate'].includes(obj.type)&&obj.hp<obj.max){
+  let b=document.createElement('button');b.textContent='⚒';b.title='Ремонт';b.onclick=()=>document.getElementById('repair').click();panel.appendChild(b);
+ }
+ if(!['tree','rock','zombie'].includes(obj.type)){
+  let b=document.createElement('button');b.textContent='⌫';b.title='Снести';b.onclick=()=>document.getElementById('demolish').click();panel.appendChild(b);
+ }
+ panel.classList.add('show');
+});
+
+const oldSelectHandler=canvas.onmousedown;
+function updateContextActions(){
+ let p=state.player,nearTree=state.objects.some(o=>['tree','rock'].includes(o.type)&&Math.hypot(o.x-p.x,o.y-p.y)<1.8);
+ let nearZombie=state.zombies.some(z=>Math.hypot(z.x-p.x,z.y-p.y)<1.6);
+ document.getElementById('collectAction').style.display=nearTree?'block':'none';
+ document.getElementById('attackAction').style.display=nearZombie?'block':'none';
+}
+document.getElementById('collectAction').onclick=collect;
+document.getElementById('attackAction').onclick=attack;
+let stickPointer=null,stickOrigin=null;
+const stick=document.getElementById('touchStick'),nub=document.getElementById('stickNub');
+function setStick(e){let r=stick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,dx=e.clientX-cx,dy=e.clientY-cy,len=Math.hypot(dx,dy),max=30;if(len>max){dx=dx/len*max;dy=dy/len*max}nub.style.transform=`translate(${dx}px,${dy}px)`;keys.w=dy<-7;keys.s=dy>7;keys.a=dx<-7;keys.d=dx>7}
+stick.addEventListener('pointerdown',e=>{stickPointer=e.pointerId;stick.setPointerCapture(e.pointerId);setStick(e)});
+stick.addEventListener('pointermove',e=>{if(e.pointerId===stickPointer)setStick(e)});
+function releaseStick(e){if(e.pointerId!==stickPointer)return;stickPointer=null;keys.w=keys.a=keys.s=keys.d=false;nub.style.transform='translate(0,0)'}
+stick.addEventListener('pointerup',releaseStick);stick.addEventListener('pointercancel',releaseStick);
+document.querySelectorAll('[data-build]').forEach(b=>{b.addEventListener('click',()=>{menuPanel.classList.remove('open');showBuildBar()})});
+document.getElementById('menuToggle').addEventListener('click',()=>{if(menuPanel.classList.contains('open'))hideBuildBar()});
+const baseTick=tick;
+tick=function(dt){baseTick(dt);updateContextActions()};
+
+let center=screenPos(22,21);camera.x=wrap.clientWidth/2-center.x;camera.y=wrap.clientHeight/2-center.y;requestAnimationFrame(frame);
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+}
+</script></body>
+</html>
